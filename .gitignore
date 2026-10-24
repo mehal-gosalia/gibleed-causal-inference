@@ -1,0 +1,16 @@
+# Data (synthetic OMOP CDM CSVs — not committed)
+GiBleed_5.5/
+
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local DuckDB files
+*.duckdb
+*.duckdb.wal
