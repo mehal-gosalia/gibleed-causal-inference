@@ -68,7 +68,24 @@ The data folder `GiBleed_5.5/` is **not** in the repository (see below).
 
 - The 2,649 OBSERVATION_PERIOD-only IDs have no PERSON record (so no age or sex) and **0 drug-exposure and 0 condition records**. They are empty observation rows: requiring a PERSON record removes no patients who could enter the cohort.
 
-**Still to do:** concept sets for celecoxib, diclofenac and GI bleeding; cohort attrition; arm sizes and event counts; analysis dataset; baseline table.
+**Concept sets (done)**
+
+Concepts were identified with CONCEPT and CONCEPT_ANCESTOR (each starting concept plus all its descendants), and selection uses the standard `DRUG_CONCEPT_ID` / `CONDITION_CONCEPT_ID` fields.
+
+| concept_id | Name | Role | Inclusion rule |
+|---|---|---|---|
+| 1118084 | celecoxib | Exposure (treatment = 1) | Ingredient + all CONCEPT_ANCESTOR descendants, via `DRUG_CONCEPT_ID` |
+| 1124300 | Diclofenac | Exposure (comparator = 0) | Ingredient + all CONCEPT_ANCESTOR descendants, via `DRUG_CONCEPT_ID` |
+| 192671 | Gastrointestinal hemorrhage (SNOMED) | Outcome and baseline exclusion | Standard concept + descendants, via `CONDITION_CONCEPT_ID` |
+| 35208414 | Gastrointestinal hemorrhage, unspecified (ICD10CM) | Source code, mapping check only | Not used for selection; non-standard, "Maps to" 192671 |
+
+- **Coverage in the data:** celecoxib 1,844 records / 1,844 patients; diclofenac 850 / 850; GI hemorrhage 479 records / 479 patients. Every record uses the starting concept itself; no descendant concepts occur.
+- **Incomplete vocabulary (reported, as the brief requires):** the vocabulary snapshot is heavily trimmed (CONCEPT has 445 rows). The example formulations 1118088 (celecoxib 200 MG Oral Capsule [Celebrex]) and 40162359 (Diclofenac Sodium 75 MG Delayed Release Oral Tablet) exist in CONCEPT but have **no CONCEPT_ANCESTOR link** to their ingredients. This does not affect the cohort, because all study-drug exposures are recorded at the ingredient level.
+- **Source mapping:** all 479 GI hemorrhage records come from ICD10CM source code 35208414, which maps to SNOMED 192671.
+- **Exposure structure:** each patient has at most one record per study drug, and **0 patients have records for both drugs**. So the same-day dual-start exclusion removes nobody, and treatment switching between the two study drugs does not occur in this data.
+- **Not included in the outcome:** "Peptic ulcer" (4027663, 802 records) is present but is not a bleeding diagnosis. It could be used for a broader-phenotype sensitivity analysis.
+
+**Still to do:** cohort attrition (rules 1–4); arm sizes and event counts; analysis dataset; baseline table.
 
 ### Task 2 — Causal study design and DAG *(not started)*
 
