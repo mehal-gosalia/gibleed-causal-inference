@@ -1,6 +1,10 @@
 # Data (synthetic OMOP CDM CSVs — not committed)
 GiBleed_5.5/
 
+# Personal notes (kept locally, not part of the submission)
+NOTES.md
+image.png
+
 # macOS
 .DS_Store
 
