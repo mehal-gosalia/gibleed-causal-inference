@@ -50,6 +50,34 @@ The data folder `GiBleed_5.5/` is **not** in the repository (see below).
 - **Cohort extraction:** DuckDB SQL queried directly over the OMOP CSVs.
 - **Analysis:** pandas, statsmodels (logistic propensity-score model, risk-ratio estimation) and matplotlib (overlap and balance plots).
 
+## Findings by task
+
+### Task 1 — Data exploration and cohort feasibility *(in progress)*
+
+**Data exploration (done)**
+- Relevant OMOP tables: PERSON, OBSERVATION_PERIOD, DRUG_EXPOSURE, CONDITION_OCCURRENCE, VISIT_OCCURRENCE, CONCEPT, CONCEPT_ANCESTOR. The key linking them is `person_id`.
+- **PERSON:** 2,694 patients, each with year of birth and sex.
+- **OBSERVATION_PERIOD:** 5,343 distinct `person_id`s, with **exactly one period per person**. Because there are no gaps between periods, the continuous-coverage rule (index −365 to +90) can be checked against a single period per patient.
+- **PERSON vs OBSERVATION_PERIOD overlap:**
+
+  | Membership | Patients |
+  |---|---|
+  | In both | 2,694 |
+  | OBSERVATION_PERIOD only | 2,649 |
+  | PERSON only | 0 |
+
+- The 2,649 OBSERVATION_PERIOD-only IDs have no PERSON record (so no age or sex) and **0 drug-exposure and 0 condition records**. They are empty observation rows: requiring a PERSON record removes no patients who could enter the cohort.
+
+**Still to do:** concept sets for celecoxib, diclofenac and GI bleeding; cohort attrition; arm sizes and event counts; analysis dataset; baseline table.
+
+### Task 2 — Causal study design and DAG *(not started)*
+
+### Task 3 — Propensity scores, IPTW and diagnostics *(not started)*
+
+### Task 4 — Confounding distortion, robustness and innovation *(not started)*
+
+### Task 5 — Scientific interpretation *(not started)*
+
 ## AI use disclosure
 
 Claude (Anthropic) was used as a tutor and coding assistant during this assessment: explaining methods, giving hints and reviewing code that I wrote, and helping with repository setup. All methodological decisions, code and written interpretation are my own, and I can explain each of them.
