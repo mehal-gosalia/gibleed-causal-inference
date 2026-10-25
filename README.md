@@ -266,7 +266,23 @@ D = log(RR_crude) − log(RR_adjusted) = log(1.312) − log(1.280) = **0.024**, 
 
 **Still to do:** research innovation proposal (250–400 words).
 
-### Task 5 — Scientific interpretation *(not started)*
+### Task 5 — Scientific interpretation *(done, 397 words)*
+
+**Cohort feasibility.** There were 2,605 new users: 1,781 on celecoxib and 824 on diclofenac. The only criterion that excluded anyone was the 90-day follow-up requirement (89 patients). Both arms had sufficient events (343 and 121 GI bleeds), so sparsity was not a concern. The data are synthetic, with a trimmed vocabulary and exposures coded at ingredient level.
+
+**Crude vs adjusted findings.** Crude 90-day GI bleed risks were 19.3% for celecoxib and 14.7% for diclofenac: RR 1.31 (95% CI 1.08–1.59), RD 4.6%. After IPTW, the RR was 1.28 (1.05–1.55) and the RD 4.1% (about 4 extra bleeds per 100). Adjustment changed the estimate only slightly (D = 0.024). Sensitivity analyses using weight truncation, overlap restriction and alternative PS specifications gave RRs of 1.28–1.31.
+
+**Balance and positivity.** Before weighting, only baseline condition count was imbalanced (SMD 0.23, higher with celecoxib), consistent with channeling of sicker patients to celecoxib. After weighting, all SMDs were below 0.01. Overlap was good (PS AUC 0.57), the maximum weight was 2.82 and the effective sample size was 96–99%, so positivity was not a concern.
+
+**Key limitations.**
+- *Unmeasured confounding.* PPI use and ulcer history are not in the model, and aspirin or anticoagulant use was not adjusted for, though these drive COX-2 selective prescribing. The E-value is 1.88, but an unmeasured confounder associated with treatment and outcome at about RR 1.3 could move the CI to include 1.
+- *Weak covariates.* The five covariates are crude record counts rather than specific conditions, and visit count was almost always zero, so balance on them says little about true GI risk.
+- *Outcome definition.* The outcome is a recorded diagnosis code, not a validated bleed.
+- *Selection bias.* Requiring complete 90-day follow-up may introduce selection bias.
+
+**Causal interpretation.** A causal claim is not defensible. Checks on measured data all pass: balance, overlap, stable weights and robust sensitivity analyses. These checks cannot test exchangeability, and the most important GI-risk confounders are unmeasured. The result is best stated as an adjusted association consistent with higher GI-bleed risk for celecoxib, not a demonstrated causal effect, and, being synthetic, not real-world safety evidence.
+
+**Practical improvement.** Replace the record counts with specific baseline covariates that this dataset already contains: prior peptic ulcer (802 records), aspirin, clopidogrel, warfarin, heparin and corticosteroid use. Including them would directly test whether the RR of about 1.28 survives adjustment for channeling. PPIs and H2 blockers are absent from these data.
 
 ## References (own reading)
 
