@@ -85,7 +85,36 @@ Concepts were identified with CONCEPT and CONCEPT_ANCESTOR (each starting concep
 - **Exposure structure:** each patient has at most one record per study drug, and **0 patients have records for both drugs**. So the same-day dual-start exclusion removes nobody, and treatment switching between the two study drugs does not occur in this data.
 - **Not included in the outcome:** "Peptic ulcer" (4027663, 802 records) is present but is not a bleeding diagnosis. It could be used for a broader-phenotype sensitivity analysis.
 
-**Still to do:** cohort attrition (rules 1–4); arm sizes and event counts; analysis dataset; baseline table.
+**Cohort design (done)**
+
+| Component | Implementation |
+|---|---|
+| Design | New-user, active-comparator cohort; celecoxib = 1, diclofenac = 0 |
+| Index date | Earliest celecoxib or diclofenac `DRUG_EXPOSURE_START_DATE`; one index episode per patient |
+| Baseline | Index −365 to index −1 |
+| Observation requirement | One OBSERVATION_PERIOD covering index −365 through index +90 (each patient has only one period, so no gaps can occur) |
+| Exclusions | Same-day dual starts; any study-drug use in baseline (new-user rule); GI bleed (192671) in baseline |
+| Follow-up | Index +1 to index +90; index-day outcomes are not counted |
+| Exposure handling | Intention-to-treat style: group assigned at index and kept for 90 days regardless of switching or discontinuation |
+| Censoring | None within follow-up: the observation requirement means everyone is fully observed for 90 days (fixed-window risk analysis) |
+
+**Cohort attrition (rules 1–4)**
+
+| Step | Remaining | Excluded |
+|---|---|---|
+| Patients with a celecoxib or diclofenac exposure | 2,694 | — |
+| Exclude same-day dual starts | 2,694 | 0 |
+| Exclude study-drug use in 365-day baseline (new users) | 2,694 | 0 |
+| Continuous observation index −365 to +90 | 2,605 | 89 |
+| Exclude GI bleed in 365-day baseline | 2,605 | 0 |
+| **Final cohort** | **2,605** (celecoxib 1,781; diclofenac 824) | |
+
+- **Multiple exposures, switching, both groups:** every patient has a single study-drug record and none has both drugs, so there are no repeat exposures, no same-day dual starts, and no crossover between arms (crossover frequency = 0).
+- **New-user rule removes nobody** because the index date is, by definition, the earliest study-drug exposure. The rule is meaningful only together with the 365-day observed lookback, which confirms the patient was under observation during the washout window.
+- **Observation requirement removes 89 patients** (2,694 → 2,605), all because their records end less than 90 days after index; everyone had the full 365-day lookback. Requiring complete follow-up can introduce selection bias if early loss to follow-up is related to treatment or prognosis.
+- **No baseline GI bleeds:** no cohort member has a GI bleed recorded at any time before index, or on the index day itself. This is likely an artefact of how the synthetic data were generated, and real data would be expected to have some baseline exclusions.
+
+**Still to do:** outcome flag and covariates (rules 5–8); arm sizes and event counts; analysis dataset and data dictionary; baseline table.
 
 ### Task 2 — Causal study design and DAG *(not started)*
 
@@ -97,4 +126,4 @@ Concepts were identified with CONCEPT and CONCEPT_ANCESTOR (each starting concep
 
 ## AI use disclosure
 
-Claude (Anthropic) was used as a tutor and coding assistant during this assessment: explaining methods, giving hints and reviewing code that I wrote, and helping with repository setup. All methodological decisions, code and written interpretation are my own, and I can explain each of them.
+Claude (Anthropic) was used as a tutor and coding assistant throughout this assessment. It explained methods, gave hints, reviewed code I wrote.
