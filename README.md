@@ -161,9 +161,25 @@ Mean (SD) for continuous and count variables; n (%) for male. Absolute standardi
 
 **Task 1 complete.**
 
-### Task 2 — Causal study design and DAG *(not started)*
+### Task 2 — Causal study design and DAG *(done)*
 
-### Task 3 — Propensity scores, IPTW and diagnostics *(in progress)*
+- **Target trial question:** among adult new users of celecoxib or diclofenac with no use of either drug and no GI bleed in the prior year, does starting celecoxib instead of diclofenac change the 90-day risk of a recorded GI bleed?
+- **Treatment strategies:** initiate celecoxib (1) vs initiate diclofenac (0) at index; intention-to-treat analogue (arm fixed at index for 90 days).
+- **Estimand:** 90-day risk ratio (primary) and risk difference; average treatment effect (ATE) in the eligible cohort, estimated with stabilized IPTW.
+- **Time zero:** eligibility, treatment assignment and start of follow-up all coincide at the index date, avoiding immortal time.
+- **DAG** (in the notebook): measured confounders (age, sex, baseline condition/drug/visit counts) → treatment and outcome; **unmeasured confounders** (prior ulcer / GI-risk history; gastroprotective PPI/H2RA co-medication; arthritis severity and aspirin/anticoagulant use); a **mediator** (post-index dose/adherence) and a **collider** (healthcare visit during follow-up), neither of which is adjusted for.
+- **Covariate justification:** all PS covariates are measured in the 365-day baseline, so none can be affected by treatment, and each plausibly affects both prescribing and bleeding risk. Post-index variables are excluded because they are mediators or colliders.
+
+| Assumption | Assessment |
+|---|---|
+| Conditional exchangeability | Questionable: measured covariates balanced, but key GI risk factors are unmeasured (E-value 1.88) |
+| Positivity | Supported: good PS overlap, 5 patients outside common support, max weight 2.82 |
+| Consistency | Partly met: dose, formulation and duration not recorded |
+| No selection bias | Possible threat: 89 patients (3.3%) excluded for incomplete follow-up |
+| No outcome misclassification | Possible threat: recorded diagnosis, not adjudicated bleed |
+| Correct PS specification | Reasonable: balance achieved; alternative specifications give the same RR |
+
+### Task 3 — Propensity scores, IPTW and diagnostics *(done)*
 
 **Propensity score model (done)**
 
@@ -217,7 +233,38 @@ Mean (SD) for continuous and count variables; n (%) for male. Absolute standardi
 - **Interpretation:** after balancing measured covariates, celecoxib initiators still had about 28% higher 90-day risk of a recorded GI bleed (about 4 extra events per 100 patients). Adjustment moved the estimate only slightly, so measured confounding explains little of the crude association.
 - **Robustness note:** a bootstrap that re-fits the propensity model failed in some resamples, because resamples without any of the 4 patients with a baseline visit make `baseline_visit_count` constant. This is a practical consequence of the near-constant covariate.
 
-### Task 4 — Confounding distortion, robustness and innovation *(not started)*
+**Task 3 complete.**
+
+### Task 4 — Confounding distortion, robustness and innovation *(in progress)*
+
+**Confounding distortion (done)**
+
+D = log(RR_crude) − log(RR_adjusted) = log(1.312) − log(1.280) = **0.024**, so the crude RR was about 2.5% higher than the IPTW-adjusted RR.
+
+- **Sign:** positive. The measured covariates (mainly baseline condition count) confounded the crude comparison towards making celecoxib look riskier, consistent with sicker patients being channelled to celecoxib.
+- **Magnitude:** small. Most of the crude association remains after adjustment.
+- **Why D is not the true total confounding bias:** it reflects only the *measured* covariates. It cannot capture unmeasured confounders (for example gastroprotective co-medication, GI risk history, NSAID dose and duration, over-the-counter aspirin). The measured covariates are weak proxies (visit count is almost always zero). D also depends on correct PS-model specification and random error. A small D therefore means "adjustment for what we measured changed little", not "there is little confounding".
+
+**Sensitivity analyses (done)**
+
+| Analysis | n | RR (95% CI) | Max weight |
+|---|---|---|---|
+| Primary: stabilized IPTW, all covariates | 2,605 | 1.28 (1.05–1.55) | 2.82 |
+| Weights truncated at 1st/99th percentile | 2,605 | 1.29 (1.06–1.56) | 1.55 |
+| Weights truncated at 5th/95th percentile | 2,605 | 1.28 (1.06–1.55) | 1.19 |
+| Overlap restriction (common PS support) | 2,600 | 1.28 (1.05–1.55) | 2.68 |
+| Alternative PS: drop visit count | 2,605 | 1.28 (1.05–1.55) | 2.82 |
+| Alternative PS: age + sex only | 2,605 | 1.31 (1.08–1.59) | 1.07 |
+
+- The estimate is stable across weight truncation, overlap restriction and covariate sets, so the result is not driven by extreme weights, non-overlap or the near-constant visit covariate.
+- Adjusting for age and sex alone reproduces the crude RR, which shows that baseline condition count accounts for essentially all of the adjustment.
+
+**Unmeasured confounding: E-value (VanderWeele & Ding 2017)**
+
+- E-value = **1.88** for the point estimate and **1.29** for the lower confidence limit.
+- An unmeasured confounder associated with both celecoxib initiation and GI bleeding by a risk ratio of about 1.9 each (beyond the measured covariates) could fully explain the observed RR; one of about 1.3 could shift the confidence interval to include 1. Gastroprotective co-medication is a plausible candidate of this strength (Shin 2018), so the result should not be read as causal.
+
+**Still to do:** research innovation proposal (250–400 words).
 
 ### Task 5 — Scientific interpretation *(not started)*
 
@@ -227,6 +274,7 @@ Mean (SD) for continuous and count variables; n (%) for male. Absolute standardi
 |---|---|
 | Austin PC. [Balance diagnostics for comparing the distribution of baseline covariates between treatment groups in propensity-score matched samples](https://pubmed.ncbi.nlm.nih.gov/19757444/). *Stat Med*. 2009;28(25):3083–3107. doi:10.1002/sim.3697 | Standardized mean differences as the recommended balance diagnostic (rather than significance tests), and the 0.10 threshold used for the baseline table and the before/after-weighting comparison (Tasks 1 and 3). |
 | Austin PC. [An introduction to propensity score methods for reducing the effects of confounding in observational studies](https://pmc.ncbi.nlm.nih.gov/articles/PMC3144483/). *Multivariate Behav Res*. 2011;46(3):399–424. doi:10.1080/00273171.2011.568786 | Propensity score definition and assumptions; the four PS methods (matching, stratification, inverse probability of treatment weighting, covariate adjustment); building the PS model from baseline covariates and checking balance afterwards (Task 3). |
+| De Paepe AL, Gibby A, Oporto-Lisboa L, et al. [Building causal models in pain research: the case of executive functioning and transitions in pain states](https://pmc.ncbi.nlm.nih.gov/articles/PMC12794360/). *Pain*. 2026;167(2):414–427. doi:10.1097/j.pain.0000000000003833 | A practical workflow for building a DAG from domain knowledge and prior studies, distinguishing confounders from mediators and colliders, and the gap between a conceptual DAG and what the available data can measure. Guided the DAG and covariate justification (Task 2). |
 | Shin S. [Safety of celecoxib versus traditional nonsteroidal anti-inflammatory drugs in older patients with arthritis](https://pmc.ncbi.nlm.nih.gov/articles/PMC6299466/). *J Pain Res*. 2018;11:3211–3219. doi:10.2147/JPR.S186000 | Real-world context: a propensity-score-matched claims cohort comparing celecoxib with traditional NSAIDs. GI benefit appeared only with long use and disappeared without PPI/H2RA co-prescription, so gastroprotective co-medication is a plausible confounder not captured in this dataset. |
 
 ## AI use disclosure
