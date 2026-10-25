@@ -52,7 +52,7 @@ The data folder `GiBleed_5.5/` is **not** in the repository (see below).
 
 ## Findings by task
 
-### Task 1 — Data exploration and cohort feasibility *(in progress)*
+### Task 1 — Data exploration and cohort feasibility *(done)*
 
 **Data exploration (done)**
 - Relevant OMOP tables: PERSON, OBSERVATION_PERIOD, DRUG_EXPOSURE, CONDITION_OCCURRENCE, VISIT_OCCURRENCE, CONCEPT, CONCEPT_ANCESTOR. The key linking them is `person_id`.
@@ -114,15 +114,120 @@ Concepts were identified with CONCEPT and CONCEPT_ANCESTOR (each starting concep
 - **Observation requirement removes 89 patients** (2,694 → 2,605), all because their records end less than 90 days after index; everyone had the full 365-day lookback. Requiring complete follow-up can introduce selection bias if early loss to follow-up is related to treatment or prognosis.
 - **No baseline GI bleeds:** no cohort member has a GI bleed recorded at any time before index, or on the index day itself. This is likely an artefact of how the synthetic data were generated, and real data would be expected to have some baseline exclusions.
 
-**Still to do:** outcome flag and covariates (rules 5–8); arm sizes and event counts; analysis dataset and data dictionary; baseline table.
+**Analysis dataset (done)**
+
+One row per patient (2,605 rows, all unique, no missing values):
+`patient_id, index_date, treatment, gi_bleed_90d, age, sex, baseline_condition_count, baseline_drug_count, baseline_visit_count`.
+
+| Arm | Patients | GI bleed events (90 days) | Risk |
+|---|---|---|---|
+| Celecoxib (1) | 1,781 | 343 | 19.3% |
+| Diclofenac (0) | 824 | 121 | 14.7% |
+
+Both arms have enough events for estimation (no sparse-event problem).
+
+**Data dictionary (derived fields)**
+
+| Field | Type | Source | Definition |
+|---|---|---|---|
+| `patient_id` | int | PERSON | `PERSON_ID`; one row per patient |
+| `index_date` | date | DRUG_EXPOSURE | Earliest celecoxib or diclofenac `DRUG_EXPOSURE_START_DATE` |
+| `treatment` | 0/1 | DRUG_EXPOSURE | 1 = celecoxib (1118084), 0 = diclofenac (1124300); fixed at index (ITT) |
+| `gi_bleed_90d` | 0/1 | CONDITION_OCCURRENCE | 1 if any GI hemorrhage (192671) starts on index +1 to +90; counts patients, not diagnosis rows |
+| `age` | int (years) | PERSON | Completed years from full birth date (year, month, day) to `index_date` |
+| `sex` | M/F | PERSON | `GENDER_CONCEPT_ID` 8507 = M, 8532 = F |
+| `baseline_condition_count` | int | CONDITION_OCCURRENCE | Distinct condition **records** starting index −365 to −1 (not unique diseases) |
+| `baseline_drug_count` | int | DRUG_EXPOSURE | Distinct drug-exposure **records** starting index −365 to −1 (not unique ingredients) |
+| `baseline_visit_count` | int | VISIT_OCCURRENCE | Distinct visit **records** starting index −365 to −1 |
+
+- **Deviation from protocol (improvement):** the protocol allows age to be approximated as index year − birth year *if the full birth date is unavailable*. Month and day of birth are recorded for every patient, so exact age in completed years was used (mean 38.2 vs 38.6 with the approximation).
+- **Crossover (rule 7 diagnostic):** 0 patients in either arm have a record of the other study drug during follow-up.
+- **Sparse covariates:** age ranges only 31–46 years. Baseline condition count (median 0, max 5) and drug count (median 0, max 12) are mostly zero. **Baseline visit count is non-zero for only 4 of 2,605 patients**, so it carries almost no information about healthcare use and is a weak proxy for utilisation-related confounding.
+
+**Baseline table by treatment (done)**
+
+Mean (SD) for continuous and count variables; n (%) for male. Absolute standardized mean difference (SMD) = |difference in means| ÷ pooled SD; 0.10 is the reference threshold for imbalance.
+
+| Covariate | Celecoxib (n = 1,781) | Diclofenac (n = 824) | Abs. SMD (unweighted) |
+|---|---|---|---|
+| Age, years | 38.17 (3.29) | 38.10 (3.25) | 0.022 |
+| Male | 885 (49.7%) | 391 (47.5%) | 0.045 |
+| Baseline condition count | 0.63 (0.83) | 0.45 (0.70) | **0.233** |
+| Baseline drug count | 0.32 (0.72) | 0.35 (0.71) | 0.044 |
+| Baseline visit count | 0.00 (0.04) | 0.00 (0.03) | 0.012 |
+
+- Before weighting, **baseline condition count is the only imbalanced covariate** (SMD 0.233 > 0.10): celecoxib initiators had more recorded conditions in the year before index. This is consistent with confounding by indication, if COX-2-selective celecoxib is preferentially prescribed to patients judged to be at higher risk.
+- The other covariates are already balanced (SMD < 0.05).
+
+**Task 1 complete.**
 
 ### Task 2 — Causal study design and DAG *(not started)*
 
-### Task 3 — Propensity scores, IPTW and diagnostics *(not started)*
+### Task 3 — Propensity scores, IPTW and diagnostics *(in progress)*
+
+**Propensity score model (done)**
+
+- **Specification:** logistic regression of treatment (celecoxib = 1) on age, male, baseline condition count, baseline drug count and baseline visit count, with main effects only. All covariates are measured in the 365-day baseline; no post-index variables are included.
+- **Missing data:** none; every covariate is complete for all 2,605 patients, so no imputation was needed.
+
+| Covariate | Coefficient (log-odds) | 95% CI | p |
+|---|---|---|---|
+| Age (per year) | 0.013 | −0.012 to 0.039 | 0.307 |
+| Male | 0.086 | −0.081 to 0.252 | 0.314 |
+| Baseline condition count | **0.357** | 0.236 to 0.477 | <0.001 |
+| Baseline drug count | **−0.178** | −0.300 to −0.055 | 0.004 |
+| Baseline visit count | 0.149 | −2.133 to 2.431 | 0.898 |
+
+- **Main driver of treatment choice:** each additional baseline condition record raises the odds of starting celecoxib by about 43% (OR ≈ 1.43), consistent with the imbalance in the baseline table. The visit-count estimate is very imprecise because only 4 patients have a baseline visit.
+- **Discrimination:** c-statistic (AUC) = 0.57, so treatment choice is only weakly predictable from the measured covariates. This means good overlap, not absence of confounding, since unmeasured factors are not in the model.
+- **Overlap and positivity:** PS ranged 0.31–0.90 in celecoxib and 0.53–0.89 in diclofenac, and the distributions largely coincide. Only **5 celecoxib patients** fall outside the diclofenac PS range (4 just above 0.888, 1 at 0.308). The distribution is spiky because the covariates are low-valued counts, giving about 290 distinct PS values.
+
+**Stabilized IPTW and diagnostics (done)**
+
+- **Weights:** celecoxib = P(T=1) / PS; diclofenac = P(T=0) / (1 − PS), with P(T=1) = 1,781 / 2,605 = 0.684.
+
+| | Celecoxib | Diclofenac |
+|---|---|---|
+| Mean weight | 1.000 | 0.999 |
+| Range | 0.76 – 2.22 | 0.67 – 2.82 |
+| Effective sample size (actual n) | 1,768 (1,781) | 792 (824) |
+
+- **Extreme weights:** none. The largest weight is 2.82 (a diclofenac patient with PS 0.888), and only 5 patients exceed 2.0. Truncation is not needed for the primary analysis, and is tested as a sensitivity analysis.
+- **Effective sample size** stays at 96–99% of the actual group sizes, so weighting loses very little information.
+
+| Covariate | Abs. SMD unweighted | Abs. SMD weighted |
+|---|---|---|
+| Age | 0.022 | 0.003 |
+| Male | 0.045 | 0.001 |
+| Baseline condition count | **0.233** | 0.002 |
+| Baseline drug count | 0.044 | 0.009 |
+| Baseline visit count | 0.012 | 0.004 |
+
+- **Balance:** after weighting, every covariate has |SMD| < 0.01, well below the 0.10 threshold, including baseline condition count (0.233 → 0.002). A Love plot is in the notebook.
+- **Limitation:** balance is achieved only on the measured covariates. Unmeasured confounders (for example GI risk factors, gastroprotective co-medication, NSAID dose and duration) are not addressed by weighting.
+
+**Crude vs IPTW-adjusted effect estimates (done)**
+
+| Analysis | Risk celecoxib | Risk diclofenac | RR (95% CI) | RD (95% CI) |
+|---|---|---|---|---|
+| Crude | 19.3% | 14.7% | 1.31 (1.08–1.59) | 4.6% (1.5–7.6%) |
+| IPTW (stabilized) | 18.8% | 14.7% | 1.28 (1.05–1.55) | 4.1% (1.1–7.2%) |
+
+- **Method:** RR from a Poisson GLM with log link and RD from a linear GLM, regressing the outcome on treatment with stabilized weights and robust (HC0) standard errors. Robust SEs do not account for estimation of the propensity score and are typically conservative for IPTW.
+- **Interpretation:** after balancing measured covariates, celecoxib initiators still had about 28% higher 90-day risk of a recorded GI bleed (about 4 extra events per 100 patients). Adjustment moved the estimate only slightly, so measured confounding explains little of the crude association.
+- **Robustness note:** a bootstrap that re-fits the propensity model failed in some resamples, because resamples without any of the 4 patients with a baseline visit make `baseline_visit_count` constant. This is a practical consequence of the near-constant covariate.
 
 ### Task 4 — Confounding distortion, robustness and innovation *(not started)*
 
 ### Task 5 — Scientific interpretation *(not started)*
+
+## References (own reading)
+
+| Source | Used for |
+|---|---|
+| Austin PC. [Balance diagnostics for comparing the distribution of baseline covariates between treatment groups in propensity-score matched samples](https://pubmed.ncbi.nlm.nih.gov/19757444/). *Stat Med*. 2009;28(25):3083–3107. doi:10.1002/sim.3697 | Standardized mean differences as the recommended balance diagnostic (rather than significance tests), and the 0.10 threshold used for the baseline table and the before/after-weighting comparison (Tasks 1 and 3). |
+| Austin PC. [An introduction to propensity score methods for reducing the effects of confounding in observational studies](https://pmc.ncbi.nlm.nih.gov/articles/PMC3144483/). *Multivariate Behav Res*. 2011;46(3):399–424. doi:10.1080/00273171.2011.568786 | Propensity score definition and assumptions; the four PS methods (matching, stratification, inverse probability of treatment weighting, covariate adjustment); building the PS model from baseline covariates and checking balance afterwards (Task 3). |
+| Shin S. [Safety of celecoxib versus traditional nonsteroidal anti-inflammatory drugs in older patients with arthritis](https://pmc.ncbi.nlm.nih.gov/articles/PMC6299466/). *J Pain Res*. 2018;11:3211–3219. doi:10.2147/JPR.S186000 | Real-world context: a propensity-score-matched claims cohort comparing celecoxib with traditional NSAIDs. GI benefit appeared only with long use and disappeared without PPI/H2RA co-prescription, so gastroprotective co-medication is a plausible confounder not captured in this dataset. |
 
 ## AI use disclosure
 
