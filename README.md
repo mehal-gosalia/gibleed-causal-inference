@@ -109,4 +109,4 @@ Method reference cited in the analysis: VanderWeele TJ, Ding P. Sensitivity anal
 
 ## AI use disclosure
 
-Claude (Anthropic) was used as a tutor and coding assistant throughout this assessment. It explained methods, gave hints, reviewed code I wrote.
+Claude (Anthropic) was used as a tutor and coding assistant throughout this assessment. It explained methods, gave hints, and reviewed and edited code I wrote. It also helped me draft the README file, and understand concepts I wasn't sure about.
